@@ -44,12 +44,45 @@ public class Scanner {
             case '!': addToken(match('=') ? BANG_EQUAL : BANG); break;
             case '=': addToken(match('=') ? EQUAL_EQUAL : EQUAL); break;
             case '<': addToken(match('=') ? LESS_EQUAL: LESS); break;
-            case '>': addToken(match('=') ? GREATER_EQUAL : GREATER);
-
+            case '>': addToken(match('=') ? GREATER_EQUAL : GREATER); break;
+            case '/':
+                if(match('/')) {
+                    // A comment goes until the end of the line.
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else {
+                    addToken(SLASH);
+                }
+                break;
+            case ' ':
+            case '\r':
+            case '\t':
+                break;
+            case 'n':
+                line++;
+                break;
+            case '"': string(); break;
             default:
                 lox.error(line, "Unexpected character.");
                 break;
         }
+    }
+
+    private void string() {
+        while(peek() != '"' && !isAtEnd()) {
+            if (peek() == '\n') line++;
+            advance();
+        }
+
+        if(!isAtEnd()) {
+            lox.error(line, "Unterminated string.");
+            return;
+        }
+
+        // The closing ".
+        advance();
+        // Trim surrounding quotes.
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
     }
 
     private boolean match(char expected) {
@@ -57,6 +90,11 @@ public class Scanner {
         if(source.charAt(current) != expected) return false;
         current++;
         return true;
+    }
+
+    private char peek() {
+        if (!isAtEnd()) return '\0';
+        return source.charAt((current));
     }
 
     private boolean isAtEnd() {
