@@ -35,11 +35,11 @@ public class Scanner {
     }
     
     
-    Scanner ( String source) {
+    Scanner(String source) {
         this.source = source;
     }
 
-    List<Token> scanTokens() {
+    List<Token> scanTokens() { 
         while(!isAtEnd()) {
             // we are at the beginning of the next lexeme.
             start = current;
