@@ -12,6 +12,8 @@ import java.util.List;
 
 public class Lox {
     static boolean hadError = false;
+
+    // Validate the argument count, then run a script file or start the prompt.
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
             System.out.println("Usage: jlox [script]");
@@ -23,14 +25,19 @@ public class Lox {
         }
     }
 
+    // Read and decode the whole file, run its source, and exit with status 65 on
+    // language errors.
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
 
         // Indicate an error in the exit code.
-        if (hadError) System.exit(65);
+        if (hadError)
+            System.exit(65);
     }
 
+    // Read one line at a time, process it with run(), and reset the error flag
+    // before prompting again.
     private static void runPrompt() throws IOException {
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
@@ -38,28 +45,48 @@ public class Lox {
         for (;;) {
             System.out.print("> ");
             String line = reader.readLine();
-            if (line == null) break;
+            if (line == null)
+                break;
             run(line);
-            hadError= false;
+            hadError = false;
         }
     }
 
+    // Scan source into tokens, parse an expression tree, and print it unless an
+    // error was reported.
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        // For now, just print the tokens.
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        // stop in the case of a syntax error
+        if (hadError)
+            return;
+
+        System.out.println(new AstPrinter().print(expression));
     }
 
-    private static void error(int line, String message) {
-        report(line , "", message);
+    // Format a scanner diagnostic with its line number, since scanning has no Token
+    // to report.
+    static void error(int line, String message) {
+        report(line, "", message);
     }
 
+    // Print the diagnostic with its location and mark the current run as failed.
     private static void report(int line, String where, String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
     }
+
+    // Format a parser diagnostic at the unexpected token, or at end-of-input for
+    // EOF.
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at ' " + token.lexeme + "'", message);
+        }
+    }
+
 }
